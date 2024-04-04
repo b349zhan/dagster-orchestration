@@ -12,5 +12,6 @@ poetry install
 # Launching Dagster Locally
 ```bash
 dagster dev
-## Assuming port 3000 is not in use, openshift developer sandbox will redirect to https://b349zhan-dagster-orchestration-code-redirect-3.apps.sandbox-m3.1530.p1.openshiftapps.com/runs
+## Assuming port 3000 is not in use, openshift developer sandbox will redirect to:
+## https://b349zhan-dagster-orchestration-code-redirect-3.apps.sandbox-m3.1530.p1.openshiftapps.com/runs
 ```
