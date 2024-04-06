@@ -1,0 +1,50 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: dagster-service
+  labels:
+    app: dagster
+spec:
+  ports:
+  - name: dagster-port
+    port: 3000
+    targetPort: 3000
+  selector:
+    app: dagster
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: dagster-deployment
+  labels:
+    app: dagster
+spec:
+  selector:
+    matchLabels:
+      app: dagster
+  template:
+    metadata:
+      labels:
+        app: dagster
+    spec:
+      containers:
+      - name: dagster-webserver
+        image: default-route-openshift-image-registry.apps.sandbox-m3.1530.p1.openshiftapps.com/b349zhan-dev/dagster:base
+        command: ["dagster-webserver", "-h", "0.0.0.0", "-p", "3000", "--grpc-host", "dagster-core-service", "--grpc-port", "4000"]
+        ports:
+        - name: webserver-port
+          containerPort: 3000
+        resources:
+          limits:
+            memory: 1Gi
+            cpu: "1"
+      - name: dagster-daemon
+        image: dagster
+        command: ["dagster-daemon", "run"]
+        ports:
+        - name: daemon-port
+          containerPort: 3001
+        resources:
+          limits:
+            memory: 1Gi
+            cpu: "1"

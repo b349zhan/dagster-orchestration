@@ -1,0 +1,42 @@
+parameters:
+  - name: IMAGE_NAME
+    value: dagster
+  - name: IMAGE_TAG
+    required: true
+    description: One of following options - base - webserver - daemon - user_code
+
+apiVersion: template.openshift.io/v1
+kind: Template
+metadata:
+  name: ${IMAGE_NAME}-build
+objects:
+  - apiVersion: v1
+    kind: ImageStream
+    metadata:
+      creationTimestamp: null
+      name: ${IMAGE_NAME}
+    spec:
+      lookupPolicy:
+      local: true
+    labels:
+      name: ${IMAGE_NAME}
+  - apiVersion: v1
+    kind: BuildConfig
+    metadata:
+      name: ${IMAGE_NAME}-build-config
+      labels:
+        component: "${IMAGE_NAME}"
+    spec:
+      source:
+        binary: {}
+      strategy:
+        dockerStrategy:
+          dockerfilePath: build-support/Dockerfile
+          target: "${IMAGE_TAG}"
+      output:
+        to:
+          kind: ImageStreamTag
+          name: "${IMAGE_NAME}:${IMAGE_TAG}"
+        noCache: false
+      runPolicy: Serial # Queue builds to disable concurrent build
+      
