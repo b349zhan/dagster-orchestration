@@ -31,6 +31,7 @@ spec:
       - name: dagster-webserver
         image: default-route-openshift-image-registry.apps.sandbox-m3.1530.p1.openshiftapps.com/b349zhan-dev/dagster:base
         command: ["dagster-webserver", "-h", "0.0.0.0", "-p", "3000", "--grpc-host", "dagster-core-service", "--grpc-port", "4000"]
+        imagePullPolicy: Always
         ports:
         - name: webserver-port
           containerPort: 3000
@@ -38,8 +39,11 @@ spec:
           limits:
             memory: 1Gi
             cpu: "1"
+        volumeMounts:
+        - name: dagster-pv
+          mountPath: /var/lib/dagster
       - name: dagster-daemon
-        image: dagster
+        image: default-route-openshift-image-registry.apps.sandbox-m3.1530.p1.openshiftapps.com/b349zhan-dev/dagster:base
         command: ["dagster-daemon", "run"]
         ports:
         - name: daemon-port
@@ -48,3 +52,28 @@ spec:
           limits:
             memory: 1Gi
             cpu: "1"
+        volumeMounts:
+        - name: dagster-pv
+          mountPath: /var/lib/dagster
+      volumes:
+      - name: dagster-pv
+        persistentVolumeClaim:
+          claimName: dagster-pvc
+---
+apiVersion: "v1"
+kind: "PersistentVolumeClaim"
+metadata:
+  name: "dagster-pvc"
+spec:
+  accessModes:
+    - "ReadWriteOnce"
+  resources:
+    requests:
+      storage: "1Gi"
+---
+apiVersion: v1
+kind: ConfigMap
+metadata: 
+  name: dagster-core-config
+data:
+  dagster.yaml

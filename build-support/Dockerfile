@@ -1,29 +1,17 @@
-FROM  python:3.11-alpine as base
+FROM  python:3.11-alpine
 
-### Setting up dagster environment
+WORKDIR /app/dagster-orchestration
+
 ENV DAGSTER_HOME=/var/lib/dagster
-
-RUN mkdir -p $DAGSTER_HOME
-WORKDIR $DAGSTER_HOME
 
 ENV PYTHONPATH=$DAGSTER_HOME
 
-COPY requirements.txt ./pyproject.toml ./poetry.lock ./README.md $DAGSTER_HOME
+ENV PATH="$HOME/.local/bin/:$PATH"
 
-RUN python -m venv ~/.virtualenvs/dagster-env
+COPY build-support/entrypoint.sh ./pyproject.toml ./poetry.lock ./README.md ./
 
-RUN source ~/.virtualenvs/dagster-env/bin/activate && \
-    pip install -r requirements.txt && \
-    poetry install --no-root
+RUN pip install poetry==1.7.1 && \
+    POETRY_VIRTUALENVS_CREATE=false poetry install
 
-FROM base as webserver
-ENTRYPOINT ["dagster-webserver", "-h", "0.0.0.0", "-p", "3000"]
-
-FROM base as daemon
-ENTRYPOINT ["dagster-daemon", "run"]
-
-# User Code
-FROM base as user_code
-COPY . .
-ENTRYPOINT ["dagster", "api", "grpc", "-h", "0.0.0.0", "-p", "4000", "-m", "dagster_demo"]
+ENTRYPOINT ["entrypoint.sh"]
 

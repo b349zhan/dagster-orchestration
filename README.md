@@ -29,3 +29,9 @@ oc start-build dagster-build-config --from-dir .
 oc apply -f build-support/deploy-postgres.yaml 
 oc delete all,pvc -l app=postgres
 ```
+
+# Deploy/Teardown Dagster
+```bash
+oc apply -f build-support/deploy-dagster.yaml 
+oc delete all,pvc -l app=dagster
+```
