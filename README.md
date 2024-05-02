@@ -5,7 +5,7 @@ The following instructions are done in [Openshift Developer Sandbox](https://con
 ```bash
 python -m venv ~/.virtualenvs/dagster-env
 source ~/.virtualenvs/dagster-env/bin/activate
-pip install -r requirements.txt
+pip install poetry
 poetry install
 ```
 
@@ -20,9 +20,10 @@ dagster dev
 ```bash
 ## clean up existing build config
 oc delete bc dagster-build-config
-oc process -f build-support/build-template.yaml -p IMAGE_TAG=base | oc apply -f - 
+oc process -f build-support/build-template.yaml | oc apply -f - 
 oc start-build dagster-build-config --from-dir .
 ```
+
 
 # Deploy/Teardown Postgres
 ```bash
@@ -33,5 +34,11 @@ oc delete all,pvc -l app=postgres
 # Deploy/Teardown Dagster
 ```bash
 oc apply -f build-support/deploy-dagster.yaml 
-oc delete all,pvc -l app=dagster
+oc delete all,pvc,configmap -l app=dagster
+```
+
+# Deploy/Teardown Dagster Workspace
+```bash
+oc apply -f build-support/deploy-workspace.yaml 
+oc delete all -l app=workspace-a
 ```

@@ -36,6 +36,8 @@ spec:
             value: dagster-db-user
           - name: POSTGRES_PASSWORD
             value: dagster-db-password
+          - name: POSTGRES_DB
+            value: dagster-db
         ports:
         - name: db-port
           containerPort: 5432

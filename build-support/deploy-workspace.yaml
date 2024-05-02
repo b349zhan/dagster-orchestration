@@ -1,0 +1,45 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: workspace-a
+  labels:
+    app: workspace-a
+spec:
+  selector:
+    matchLabels:
+      app: workspace-a
+  template:
+    metadata:
+      labels:
+        app: workspace-a
+    spec:
+      containers:
+      - name: workspace-a
+        image: default-route-openshift-image-registry.apps.sandbox-m3.1530.p1.openshiftapps.com/b349zhan-dev/dagster:core
+        imagePullPolicy: Always
+        ports:
+          - name: workspace-port
+            containerPort: 4000
+        args: ["dagster", "api", "grpc", "--module-name", "dagster_demo", "--host", "0.0.0.0", "--port", "4000"]
+        resources:
+          limits:
+            memory: 1Gi
+            cpu: 500m
+        env:
+        - name: DAGSTER_HOME
+          value: "~"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: workspace-a-service
+  labels: 
+    app: workspace-a
+spec:
+  ports:
+  - name: workspace-port
+    port: 4000
+    targetPort: 4000
+  selector:
+    app: workspace-a

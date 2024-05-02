@@ -1,4 +1,4 @@
-FROM  python:3.11-alpine
+FROM  python:3.11-alpine as base
 
 WORKDIR /app/dagster-orchestration
 
@@ -8,10 +8,10 @@ ENV PYTHONPATH=$DAGSTER_HOME
 
 ENV PATH="$HOME/.local/bin/:$PATH"
 
-COPY build-support/entrypoint.sh ./pyproject.toml ./poetry.lock ./README.md ./
+COPY ./pyproject.toml ./poetry.lock ./README.md ./
 
 RUN pip install poetry==1.7.1 && \
     POETRY_VIRTUALENVS_CREATE=false poetry install
 
-ENTRYPOINT ["entrypoint.sh"]
+COPY . .
 

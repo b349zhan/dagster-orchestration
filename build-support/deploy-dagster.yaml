@@ -1,7 +1,7 @@
 apiVersion: v1
 kind: Service
 metadata:
-  name: dagster-service
+  name: dagster-core-service
   labels:
     app: dagster
 spec:
@@ -27,10 +27,23 @@ spec:
       labels:
         app: dagster
     spec:
+      initContainers:
+      - name: wait-for-db
+        image: postgres:14
+        args:
+        - /bin/bash
+        - -c
+        - >
+          set -x;
+          while true; do
+            pg_isready -d dagster-db -h postgres-service -p 5432 -U dagster-db-user
+            if [ $? -eq 0 ]; then break; fi
+            sleep 5;
+          done
       containers:
       - name: dagster-webserver
-        image: default-route-openshift-image-registry.apps.sandbox-m3.1530.p1.openshiftapps.com/b349zhan-dev/dagster:base
-        command: ["dagster-webserver", "-h", "0.0.0.0", "-p", "3000", "--grpc-host", "dagster-core-service", "--grpc-port", "4000"]
+        image: default-route-openshift-image-registry.apps.sandbox-m3.1530.p1.openshiftapps.com/b349zhan-dev/dagster:core
+        command: ["dagster-webserver", "-h", "0.0.0.0", "-p", "3000", "-w", "/var/lib/dagster/workspace.yaml"]
         imagePullPolicy: Always
         ports:
         - name: webserver-port
@@ -42,9 +55,16 @@ spec:
         volumeMounts:
         - name: dagster-pv
           mountPath: /var/lib/dagster
+        - name: dagster-core-map
+          mountPath: /var/lib/dagster/dagster.yaml
+          subPath: dagster.yaml
+        - name: dagster-workspace-map
+          mountPath: /var/lib/dagster/workspace.yaml
+          subPath: workspace.yaml
       - name: dagster-daemon
-        image: default-route-openshift-image-registry.apps.sandbox-m3.1530.p1.openshiftapps.com/b349zhan-dev/dagster:base
-        command: ["dagster-daemon", "run"]
+        image: default-route-openshift-image-registry.apps.sandbox-m3.1530.p1.openshiftapps.com/b349zhan-dev/dagster:core
+        command: ["dagster-daemon", "run", "-w", "/var/lib/dagster/workspace.yaml"]
+        imagePullPolicy: Always
         ports:
         - name: daemon-port
           containerPort: 3001
@@ -55,10 +75,34 @@ spec:
         volumeMounts:
         - name: dagster-pv
           mountPath: /var/lib/dagster
+        - name: dagster-core-map
+          mountPath: /var/lib/dagster/dagster.yaml
+          subPath: dagster.yaml
+        - name: dagster-workspace-map
+          mountPath: /var/lib/dagster/workspace.yaml
+          subPath: workspace.yaml
+      - name: busybox
+        image: gcr.io/google_containers/busybox
+        args: ["sleep", "10000"]
+        volumeMounts:
+        - name: dagster-pv
+          mountPath: /var/lib/dagster
       volumes:
       - name: dagster-pv
         persistentVolumeClaim:
           claimName: dagster-pvc
+      - name: dagster-core-map
+        configMap:
+          name: dagster-core-config
+          items:
+            - key: dagster.yaml
+              path: dagster.yaml
+      - name: dagster-workspace-map
+        configMap:
+          name: dagster-workspace-config
+          items:
+            - key: workspace.yaml
+              path: workspace.yaml
 ---
 apiVersion: "v1"
 kind: "PersistentVolumeClaim"
@@ -75,5 +119,54 @@ apiVersion: v1
 kind: ConfigMap
 metadata: 
   name: dagster-core-config
+  labels:
+    app: dagster
 data:
-  dagster.yaml
+  dagster.yaml: >
+    python_logs:
+      python_log_level: INFO
+    storage:
+      postgres:
+        postgres_db:
+          username: dagster-db-user
+          password: dagster-db-password
+          hostname: postgres-service
+          db_name: dagster-db
+          port: 5432
+    run_queue:
+      max_concurrent_runs: 10
+---
+apiVersion: v1
+kind: ConfigMap
+metadata: 
+  name: dagster-workspace-config
+  labels:
+    app: dagster
+data:
+  workspace.yaml: >
+    load_from:
+      - grpc_server:
+          host: workspace-a-service
+          port: 4000
+          location_name: "workspace-A"
+      - grpc_server:
+          host: workspace-b-service
+          port: 4000
+          location_name: "workspace-B"
+---
+apiVersion: route.openshift.io/v1
+kind: Route
+metadata:
+  name: dagster-route
+  labels:
+    app: dagster
+spec:
+  host: bowen-dagster-ui.com
+  port:
+    targetPort: 3000
+  to:
+    kind: Service
+    name: dagster-core-service
+  tls:
+    termination: passthrough 
+    insecureEdgeTerminationPolicy: None 

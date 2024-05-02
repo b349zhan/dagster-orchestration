@@ -2,8 +2,7 @@ parameters:
   - name: IMAGE_NAME
     value: dagster
   - name: IMAGE_TAG
-    required: true
-    description: One of following options - base - webserver - daemon - user_code
+    value: core
 
 apiVersion: template.openshift.io/v1
 kind: Template
@@ -32,7 +31,6 @@ objects:
       strategy:
         dockerStrategy:
           dockerfilePath: build-support/Dockerfile
-          target: "${IMAGE_TAG}"
       output:
         to:
           kind: ImageStreamTag
